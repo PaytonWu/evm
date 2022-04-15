@@ -47,5 +47,5 @@ members = [
   "core",
   "gasometer",
   "runtime",
-  "fuzzer"
+  #"fuzzer"
 ]

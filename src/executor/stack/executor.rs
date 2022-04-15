@@ -186,8 +186,12 @@ impl<'config> StackSubstateMetadata<'config> {
 	}
 }
 
+pub trait Erc20Backend {
+	fn erc20_decimals(&self, erc20_id: u8) -> u8;
+}
+
 #[auto_impl::auto_impl(&mut, Box)]
-pub trait StackState<'config>: Backend {
+pub trait StackState<'config>: Backend + Erc20Backend {
 	fn metadata(&self) -> &StackSubstateMetadata<'config>;
 	fn metadata_mut(&mut self) -> &mut StackSubstateMetadata<'config>;
 
@@ -261,6 +265,20 @@ pub trait PrecompileSet {
 	fn is_precompile(&self, address: H160) -> bool;
 }
 
+pub trait StatefulPrecompileSet<'config, StateType : StackState<'config>> {
+	/// Tries to execute a precompile in the precompile set.
+	/// If the provided address is not a precompile, returns None.
+	fn execute(&self, state: &StateType, address: H160, input: &[u8], gas_limit: Option<u64>, context: &Context, is_static: bool,) -> Option<PrecompileResult>;
+
+	/// Check if the given address is a precompile. Should only be called to
+	/// perform the check while not executing the precompile afterward, since
+	/// `execute` already performs a check internally.
+	fn is_precompile(&self, address: H160) -> bool;
+
+	// fn set_state(state: Option<&StateType>);
+	// fn get_state() -> Option<&StateType>;
+}
+
 impl PrecompileSet for () {
 	fn execute(
 		&self,
@@ -278,12 +296,37 @@ impl PrecompileSet for () {
 	}
 }
 
+impl<'config, StateType : StackState<'config>> StatefulPrecompileSet<'config, StateType> for () {
+	fn execute(&self, _state: &StateType, _address: H160, _input: &[u8], _gas_limit: Option<u64>, _context: &Context, _is_static: bool) -> Option<PrecompileResult> {
+		None
+	}
+
+	fn is_precompile(&self, _address: H160) -> bool {
+		false
+	}
+
+	// fn set_state(_state: Option<&StateType>) {
+	// }
+	//
+	// fn get_state() -> Option<&StateType> {
+	// 	Option::None
+	// }
+}
+
 /// Precompiles function signature. Expected input arguments are:
 ///  * Input
 ///  * Gas limit
 ///  * Context
 ///  * Is static
 pub type PrecompileFn = fn(&[u8], Option<u64>, &Context, bool) -> PrecompileResult;
+
+/// StatefulPrecompiles function signature. Expected input arguments are:
+/// * Input
+/// * State
+/// * Gas limit
+/// * Context
+/// * Is static
+pub type StatefulPrecompileFn<S> = fn(&S, &[u8], Option<u64>, &Context, bool) -> PrecompileResult;
 
 impl PrecompileSet for BTreeMap<H160, PrecompileFn> {
 	fn execute(
@@ -306,15 +349,33 @@ impl PrecompileSet for BTreeMap<H160, PrecompileFn> {
 	}
 }
 
-/// Stack-based executor.
-pub struct StackExecutor<'config, 'precompiles, S, P> {
-	config: &'config Config,
-	state: S,
-	precompile_set: &'precompiles P,
+impl<'config, StateType : StackState<'config>> StatefulPrecompileSet<'config, StateType> for BTreeMap<H160, StatefulPrecompileFn<StateType>> {
+	fn execute(&self, state: &StateType, address: H160, input: &[u8], gas_limit: Option<u64>, context: &Context, is_static: bool) -> Option<PrecompileResult> {
+		self.get(&address).map(|stateful_precompile_fn| (*stateful_precompile_fn)(state, input, gas_limit, context, is_static))
+	}
+
+	fn is_precompile(&self, address: H160) -> bool {
+		self.contains_key(&address)
+	}
+
+	// fn set_state(_state: Option<&StateType>) {
+	// }
+	//
+	// fn get_state() -> Option<&StateType> {
+	// 	todo!()
+	// }
 }
 
-impl<'config, 'precompiles, S: StackState<'config>, P: PrecompileSet>
-	StackExecutor<'config, 'precompiles, S, P>
+/// Stack-based executor.
+pub struct StackExecutor<'config, 'precompiles, 'stateful_precompiles, S, Precompiles, StatefulPrecompiles> {
+	config: &'config Config,
+	state: S,
+	precompile_set: &'precompiles Precompiles,
+	stateful_precompile_set: &'stateful_precompiles StatefulPrecompiles,
+}
+
+impl<'config, 'precompiles, 'stateful_precompiles, 's, S: StackState<'config>, P: PrecompileSet, SP: StatefulPrecompileSet<'config, S>>
+	StackExecutor<'config, 'precompiles, 'stateful_precompiles, S, P, SP>
 {
 	/// Return a reference of the Config.
 	pub fn config(&self) -> &'config Config {
@@ -326,16 +387,22 @@ impl<'config, 'precompiles, S: StackState<'config>, P: PrecompileSet>
 		self.precompile_set
 	}
 
+	pub fn stateful_precompiles(&self) -> &'stateful_precompiles SP {
+		self.stateful_precompile_set
+	}
+
 	/// Create a new stack-based executor with given precompiles.
 	pub fn new_with_precompiles(
 		state: S,
 		config: &'config Config,
 		precompile_set: &'precompiles P,
+		stateful_precompile_set: &'stateful_precompiles SP
 	) -> Self {
 		Self {
 			config,
 			state,
 			precompile_set,
+			stateful_precompile_set,
 		}
 	}
 
@@ -905,6 +972,56 @@ impl<'config, 'precompiles, S: StackState<'config>, P: PrecompileSet>
 			};
 		}
 
+		if let Some(result) =
+		self.stateful_precompile_set
+			.execute(self.state(), code_address, &input, Some(gas_limit), &context, is_static)
+		{
+			return match result {
+				Ok(PrecompileOutput {
+					   exit_status,
+					   output,
+					   cost,
+					   logs,
+				   }) => {
+					for Log {
+						address,
+						topics,
+						data,
+					} in logs
+					{
+						match self.log(address, topics, data) {
+							Ok(_) => continue,
+							Err(error) => {
+								return Capture::Exit((ExitReason::Error(error), output));
+							}
+						}
+					}
+
+					let _ = self.state.metadata_mut().gasometer.record_cost(cost);
+					let _ = self.exit_substate(StackExitKind::Succeeded);
+					Capture::Exit((ExitReason::Succeed(exit_status), output))
+				}
+				Err(PrecompileFailure::Error { exit_status }) => {
+					let _ = self.exit_substate(StackExitKind::Failed);
+					Capture::Exit((ExitReason::Error(exit_status), Vec::new()))
+				}
+				Err(PrecompileFailure::Revert {
+						exit_status,
+						output,
+						cost,
+					}) => {
+					let _ = self.state.metadata_mut().gasometer.record_cost(cost);
+					let _ = self.exit_substate(StackExitKind::Reverted);
+					Capture::Exit((ExitReason::Revert(exit_status), output))
+				}
+				Err(PrecompileFailure::Fatal { exit_status }) => {
+					self.state.metadata_mut().gasometer.fail();
+					let _ = self.exit_substate(StackExitKind::Failed);
+					Capture::Exit((ExitReason::Fatal(exit_status), Vec::new()))
+				}
+			};
+		}
+
 		let mut runtime = Runtime::new(Rc::new(code), Rc::new(input), context, self.config);
 
 		let reason = self.execute(&mut runtime);
@@ -932,8 +1049,8 @@ impl<'config, 'precompiles, S: StackState<'config>, P: PrecompileSet>
 	}
 }
 
-impl<'config, 'precompiles, S: StackState<'config>, P: PrecompileSet> Handler
-	for StackExecutor<'config, 'precompiles, S, P>
+impl<'config, 'precompiles, 'stateful_precompiles, 's, S: StackState<'config>, P: PrecompileSet, SP: StatefulPrecompileSet<'config, S>> Handler
+	for StackExecutor<'config, 'precompiles, 'stateful_precompiles, S, P, SP>
 {
 	type CreateInterrupt = Infallible;
 	type CreateFeedback = Infallible;
@@ -970,21 +1087,6 @@ impl<'config, 'precompiles, S: StackState<'config>, P: PrecompileSet> Handler
 			.unwrap_or_default()
 	}
 
-	fn exists(&self, address: H160) -> bool {
-		if self.config.empty_considered_exists {
-			self.state.exists(address)
-		} else {
-			self.state.exists(address) && !self.state.is_empty(address)
-		}
-	}
-
-	fn is_cold(&self, address: H160, maybe_index: Option<H256>) -> bool {
-		match maybe_index {
-			None => !self.precompile_set.is_precompile(address) && self.state.is_cold(address),
-			Some(index) => self.state.is_storage_cold(address, index),
-		}
-	}
-
 	fn gas_left(&self) -> U256 {
 		U256::from(self.state.metadata().gasometer.gas())
 	}
@@ -992,9 +1094,11 @@ impl<'config, 'precompiles, S: StackState<'config>, P: PrecompileSet> Handler
 	fn gas_price(&self) -> U256 {
 		self.state.gas_price()
 	}
+
 	fn origin(&self) -> H160 {
 		self.state.origin()
 	}
+
 	fn block_hash(&self, number: U256) -> H256 {
 		self.state.block_hash(number)
 	}
@@ -1019,9 +1123,22 @@ impl<'config, 'precompiles, S: StackState<'config>, P: PrecompileSet> Handler
 	fn chain_id(&self) -> U256 {
 		self.state.chain_id()
 	}
-
+	fn exists(&self, address: H160) -> bool {
+		if self.config.empty_considered_exists {
+			self.state.exists(address)
+		} else {
+			self.state.exists(address) && !self.state.is_empty(address)
+		}
+	}
 	fn deleted(&self, address: H160) -> bool {
 		self.state.deleted(address)
+	}
+
+	fn is_cold(&self, address: H160, maybe_index: Option<H256>) -> bool {
+		match maybe_index {
+			None => !self.precompile_set.is_precompile(address) && !self.stateful_precompile_set.is_precompile(address) && self.state.is_cold(address),
+			Some(index) => self.state.is_storage_cold(address, index),
+		}
 	}
 
 	fn set_storage(&mut self, address: H160, index: H256, value: H256) -> Result<(), ExitError> {
