@@ -265,7 +265,7 @@ pub trait PrecompileSet {
 	fn is_precompile(&self, address: H160) -> bool;
 }
 
-pub trait StatefulPrecompileSet<'config, StateType : StackState<'config>> {
+pub trait StatefulPrecompileSet<StateType> {
 	/// Tries to execute a precompile in the precompile set.
 	/// If the provided address is not a precompile, returns None.
 	fn execute(&self, state: &StateType, address: H160, input: &[u8], gas_limit: Option<u64>, context: &Context, is_static: bool,) -> Option<PrecompileResult>;
@@ -274,9 +274,6 @@ pub trait StatefulPrecompileSet<'config, StateType : StackState<'config>> {
 	/// perform the check while not executing the precompile afterward, since
 	/// `execute` already performs a check internally.
 	fn is_precompile(&self, address: H160) -> bool;
-
-	// fn set_state(state: Option<&StateType>);
-	// fn get_state() -> Option<&StateType>;
 }
 
 impl PrecompileSet for () {
@@ -296,7 +293,7 @@ impl PrecompileSet for () {
 	}
 }
 
-impl<'config, StateType : StackState<'config>> StatefulPrecompileSet<'config, StateType> for () {
+impl<'config, StateType : StackState<'config>> StatefulPrecompileSet<StateType> for () {
 	fn execute(&self, _state: &StateType, _address: H160, _input: &[u8], _gas_limit: Option<u64>, _context: &Context, _is_static: bool) -> Option<PrecompileResult> {
 		None
 	}
@@ -304,13 +301,6 @@ impl<'config, StateType : StackState<'config>> StatefulPrecompileSet<'config, St
 	fn is_precompile(&self, _address: H160) -> bool {
 		false
 	}
-
-	// fn set_state(_state: Option<&StateType>) {
-	// }
-	//
-	// fn get_state() -> Option<&StateType> {
-	// 	Option::None
-	// }
 }
 
 /// Precompiles function signature. Expected input arguments are:
@@ -349,7 +339,7 @@ impl PrecompileSet for BTreeMap<H160, PrecompileFn> {
 	}
 }
 
-impl<'config, StateType : StackState<'config>> StatefulPrecompileSet<'config, StateType> for BTreeMap<H160, StatefulPrecompileFn<StateType>> {
+impl<'config, StateType : StackState<'config>> StatefulPrecompileSet<StateType> for BTreeMap<H160, StatefulPrecompileFn<StateType>> {
 	fn execute(&self, state: &StateType, address: H160, input: &[u8], gas_limit: Option<u64>, context: &Context, is_static: bool) -> Option<PrecompileResult> {
 		self.get(&address).map(|stateful_precompile_fn| (*stateful_precompile_fn)(state, input, gas_limit, context, is_static))
 	}
@@ -357,13 +347,6 @@ impl<'config, StateType : StackState<'config>> StatefulPrecompileSet<'config, St
 	fn is_precompile(&self, address: H160) -> bool {
 		self.contains_key(&address)
 	}
-
-	// fn set_state(_state: Option<&StateType>) {
-	// }
-	//
-	// fn get_state() -> Option<&StateType> {
-	// 	todo!()
-	// }
 }
 
 /// Stack-based executor.
@@ -374,7 +357,7 @@ pub struct StackExecutor<'config, 'precompiles, 'stateful_precompiles, S, Precom
 	stateful_precompile_set: &'stateful_precompiles StatefulPrecompiles,
 }
 
-impl<'config, 'precompiles, 'stateful_precompiles, 's, S: StackState<'config>, P: PrecompileSet, SP: StatefulPrecompileSet<'config, S>>
+impl<'config, 'precompiles, 'stateful_precompiles, S: StackState<'config>, P: PrecompileSet, SP: StatefulPrecompileSet<S>>
 	StackExecutor<'config, 'precompiles, 'stateful_precompiles, S, P, SP>
 {
 	/// Return a reference of the Config.
@@ -1049,7 +1032,7 @@ impl<'config, 'precompiles, 'stateful_precompiles, 's, S: StackState<'config>, P
 	}
 }
 
-impl<'config, 'precompiles, 'stateful_precompiles, 's, S: StackState<'config>, P: PrecompileSet, SP: StatefulPrecompileSet<'config, S>> Handler
+impl<'config, 'precompiles, 'stateful_precompiles, 's, S: StackState<'config>, P: PrecompileSet, SP: StatefulPrecompileSet<S>> Handler
 	for StackExecutor<'config, 'precompiles, 'stateful_precompiles, S, P, SP>
 {
 	type CreateInterrupt = Infallible;
