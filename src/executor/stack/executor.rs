@@ -339,7 +339,7 @@ impl PrecompileSet for BTreeMap<H160, PrecompileFn> {
 	}
 }
 
-impl<'config, StateType : StackState<'config>> StatefulPrecompileSet<StateType> for BTreeMap<H160, StatefulPrecompileFn<StateType>> {
+impl<StateType> StatefulPrecompileSet<StateType> for BTreeMap<H160, StatefulPrecompileFn<StateType>> {
 	fn execute(&self, state: &StateType, address: H160, input: &[u8], gas_limit: Option<u64>, context: &Context, is_static: bool) -> Option<PrecompileResult> {
 		self.get(&address).map(|stateful_precompile_fn| (*stateful_precompile_fn)(state, input, gas_limit, context, is_static))
 	}
@@ -1032,7 +1032,7 @@ impl<'config, 'precompiles, 'stateful_precompiles, S: StackState<'config>, P: Pr
 	}
 }
 
-impl<'config, 'precompiles, 'stateful_precompiles, 's, S: StackState<'config>, P: PrecompileSet, SP: StatefulPrecompileSet<S>> Handler
+impl<'config, 'precompiles, 'stateful_precompiles, S: StackState<'config>, P: PrecompileSet, SP: StatefulPrecompileSet<S>> Handler
 	for StackExecutor<'config, 'precompiles, 'stateful_precompiles, S, P, SP>
 {
 	type CreateInterrupt = Infallible;
