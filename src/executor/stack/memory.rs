@@ -8,7 +8,7 @@ use alloc::{
 };
 use core::mem;
 use primitive_types::{H160, H256, U256};
-use crate::executor::stack::Erc20Backend;
+use crate::executor::stack::ExtBackend;
 
 #[derive(Clone, Debug)]
 pub struct MemoryStackAccount {
@@ -464,9 +464,9 @@ impl<'backend, 'config, B: Backend> Backend for MemoryStackState<'backend, 'conf
 	}
 }
 
-impl<'backend, 'config, B: Backend> Erc20Backend for MemoryStackState<'backend, 'config, B> {
-	fn erc20_decimals(&self, _erc20_id: u8) -> u8 {
-		18_u8
+impl<'backend, 'config, B: ExtBackend> ExtBackend for MemoryStackState<'backend, 'config, B> {
+	fn erc20_decimals(&self, erc20_id: u8) -> u8 {
+		self.backend.erc20_decimals(erc20_id)
 	}
 }
 
@@ -553,12 +553,6 @@ impl<'backend, 'config, B: Backend> StackState<'config> for MemoryStackState<'ba
 		self.substate.touch(address, self.backend)
 	}
 }
-
-// impl<'backend, 'config, 'ext_state, B: Backend, ExtState: Erc20Backend> Erc20Backend for MemoryStackState<'backend, 'config, 'ext_state, B, ExtState> {
-// 	fn erc20_decimals(&self, erc20_id: u8) -> u8 {
-// 		self.ext_state.erc20_decimals(erc20_id)
-// 	}
-// }
 
 impl<'backend, 'config, B: Backend> MemoryStackState<'backend, 'config, B> {
 	pub fn new(metadata: StackSubstateMetadata<'config>, backend: &'backend B) -> Self {

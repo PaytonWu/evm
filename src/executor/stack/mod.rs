@@ -5,7 +5,7 @@
 mod executor;
 mod memory;
 
-pub use self::executor::Erc20Backend;
+pub use self::executor::ExtBackend;
 pub use self::executor::StackSubstateMetadata;
 pub use self::executor::StackState;
 pub use self::executor::StackExitKind;

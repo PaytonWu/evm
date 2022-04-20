@@ -2,7 +2,7 @@ use super::{Apply, ApplyBackend, Backend, Basic, Log};
 use alloc::collections::BTreeMap;
 use alloc::vec::Vec;
 use primitive_types::{H160, H256, U256};
-use crate::executor::stack::Erc20Backend;
+use crate::executor::stack::ExtBackend;
 
 /// Vicinity value of a memory backend.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -223,7 +223,7 @@ impl<'vicinity> ApplyBackend for MemoryBackend<'vicinity> {
 	}
 }
 
-impl<'vicinity> Erc20Backend for MemoryBackend<'vicinity> {
+impl<'vicinity> ExtBackend for MemoryBackend<'vicinity> {
 	fn erc20_decimals(&self, _: u8) -> u8 {
 		18_u8
 	}

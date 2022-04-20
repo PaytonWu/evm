@@ -186,12 +186,12 @@ impl<'config> StackSubstateMetadata<'config> {
 	}
 }
 
-pub trait Erc20Backend {
+pub trait ExtBackend {
 	fn erc20_decimals(&self, erc20_id: u8) -> u8;
 }
 
 #[auto_impl::auto_impl(&mut, Box)]
-pub trait StackState<'config>: Backend + Erc20Backend {
+pub trait StackState<'config> : Backend {
 	fn metadata(&self) -> &StackSubstateMetadata<'config>;
 	fn metadata_mut(&mut self) -> &mut StackSubstateMetadata<'config>;
 
