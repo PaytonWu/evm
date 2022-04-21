@@ -356,15 +356,15 @@ impl<StateType> StatefulPrecompileSet<StateType> for BTreeMap<H160, StatefulPrec
 }
 
 /// Stack-based executor.
-pub struct StackExecutor<'config, 'precompiles, 'stateful_precompiles, S, Precompiles, StatefulPrecompiles> {
+pub struct StackExecutor<'config, 'precompiles, S, Precompiles, StatefulPrecompiles> {
 	config: &'config Config,
 	state: S,
 	precompile_set: &'precompiles Precompiles,
-	stateful_precompile_set: &'stateful_precompiles StatefulPrecompiles,
+	stateful_precompile_set: &'precompiles StatefulPrecompiles,
 }
 
-impl<'config, 'precompiles, 'stateful_precompiles, S: StackState<'config>, P: PrecompileSet, SP: StatefulPrecompileSet<S>>
-	StackExecutor<'config, 'precompiles, 'stateful_precompiles, S, P, SP>
+impl<'config, 'precompiles, S: StackState<'config>, P: PrecompileSet, SP: StatefulPrecompileSet<S>>
+	StackExecutor<'config, 'precompiles, S, P, SP>
 {
 	/// Return a reference of the Config.
 	pub fn config(&self) -> &'config Config {
@@ -376,7 +376,7 @@ impl<'config, 'precompiles, 'stateful_precompiles, S: StackState<'config>, P: Pr
 		self.precompile_set
 	}
 
-	pub fn stateful_precompiles(&self) -> &'stateful_precompiles SP {
+	pub fn stateful_precompiles(&self) -> &'precompiles SP {
 		self.stateful_precompile_set
 	}
 
@@ -385,7 +385,7 @@ impl<'config, 'precompiles, 'stateful_precompiles, S: StackState<'config>, P: Pr
 		state: S,
 		config: &'config Config,
 		precompile_set: &'precompiles P,
-		stateful_precompile_set: &'stateful_precompiles SP
+		stateful_precompile_set: &'precompiles SP
 	) -> Self {
 		Self {
 			config,
@@ -1038,8 +1038,8 @@ impl<'config, 'precompiles, 'stateful_precompiles, S: StackState<'config>, P: Pr
 	}
 }
 
-impl<'config, 'precompiles, 'stateful_precompiles, S: StackState<'config>, P: PrecompileSet, SP: StatefulPrecompileSet<S>> Handler
-	for StackExecutor<'config, 'precompiles, 'stateful_precompiles, S, P, SP>
+impl<'config, 'precompiles, S: StackState<'config>, P: PrecompileSet, SP: StatefulPrecompileSet<S>> Handler
+	for StackExecutor<'config, 'precompiles, S, P, SP>
 {
 	type CreateInterrupt = Infallible;
 	type CreateFeedback = Infallible;
