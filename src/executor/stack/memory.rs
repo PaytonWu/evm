@@ -465,8 +465,32 @@ impl<'backend, 'config, B: Backend> Backend for MemoryStackState<'backend, 'conf
 }
 
 impl<'backend, 'config, B: ExtBackend> ExtBackend for MemoryStackState<'backend, 'config, B> {
-	fn erc20_decimals(&self, erc20_id: u8) -> u8 {
-		self.backend.erc20_decimals(erc20_id)
+	fn precompiled_erc20_decimals(&self, contract_id: u8) -> u8 {
+		self.backend.precompiled_erc20_decimals(contract_id)
+	}
+
+	fn precompiled_erc20_total_supply(&self, contract_id: u8) -> U256 {
+		self.backend.precompiled_erc20_total_supply(contract_id)
+	}
+
+	fn precompiled_erc20_balance_of(&self, contract_id: u8, owner: H160) -> U256 {
+		self.backend.precompiled_erc20_balance_of(contract_id, owner)
+	}
+
+	fn precompiled_erc20_allowance(&self, contract_id: u8, owner: H160, spender: H160) -> U256 {
+		self.backend.precompiled_erc20_allowance(contract_id, owner, spender)
+	}
+
+	fn precompiled_erc20_transfer(&self, contract_id: u8, to: H160, value: U256) -> bool {
+		self.backend.precompiled_erc20_transfer(contract_id, to, value)
+	}
+
+	fn precompiled_erc20_approve(&self, contract_id: u8, spender: H160, value: U256) -> bool {
+		self.backend.precompiled_erc20_approve(contract_id, spender, value)
+	}
+
+	fn precompiled_erc20_transfer_from(&self, contract_id: u8, from: H160, to: H160, value: U256) -> bool {
+		self.backend.precompiled_erc20_transfer_from(contract_id, from, to, value)
 	}
 }
 

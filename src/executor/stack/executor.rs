@@ -187,7 +187,13 @@ impl<'config> StackSubstateMetadata<'config> {
 }
 
 pub trait ExtBackend {
-	fn erc20_decimals(&self, erc20_id: u8) -> u8;
+	fn precompiled_erc20_decimals(&self, contract_id: u8) -> u8;
+	fn precompiled_erc20_total_supply(&self, contract_id: u8) -> U256;
+	fn precompiled_erc20_balance_of(&self, contract_id: u8, owner: H160) -> U256;
+	fn precompiled_erc20_allowance(&self, contract_id: u8, owner: H160, spender: H160) -> U256;
+	fn precompiled_erc20_transfer(&self, contract_id: u8, to: H160, value: U256) -> bool;
+	fn precompiled_erc20_approve(&self, contract_id: u8, spender: H160, value: U256) -> bool;
+	fn precompiled_erc20_transfer_from(&self, contract_id: u8, from: H160, to: H160, value: U256) -> bool;
 }
 
 #[auto_impl::auto_impl(&mut, Box)]

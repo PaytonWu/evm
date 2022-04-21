@@ -224,7 +224,31 @@ impl<'vicinity> ApplyBackend for MemoryBackend<'vicinity> {
 }
 
 impl<'vicinity> ExtBackend for MemoryBackend<'vicinity> {
-	fn erc20_decimals(&self, _: u8) -> u8 {
+	fn precompiled_erc20_decimals(&self, _contract_id: u8) -> u8 {
 		18_u8
+	}
+
+	fn precompiled_erc20_total_supply(&self, _contract_id: u8) -> U256 {
+		U256::from(100_u64)
+	}
+
+	fn precompiled_erc20_balance_of(&self, _contract_id: u8, _owner: H160) -> U256 {
+		U256::from(100_u64)
+	}
+
+	fn precompiled_erc20_allowance(&self, _contract_id: u8, _owner: H160, _spender: H160) -> U256 {
+		U256::from(100_u64)
+	}
+
+	fn precompiled_erc20_transfer(&self, _contract_id: u8, _to: H160, _value: U256) -> bool {
+		true
+	}
+
+	fn precompiled_erc20_approve(&self, _contract_id: u8, _spender: H160, _value: U256) -> bool {
+		true
+	}
+
+	fn precompiled_erc20_transfer_from(&self, _contract_id: u8, _from: H160, _to: H160, _value: U256) -> bool {
+		true
 	}
 }
