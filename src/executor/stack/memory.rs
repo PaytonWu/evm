@@ -492,6 +492,14 @@ impl<'backend, 'config, B: ExtBackend> ExtBackend for MemoryStackState<'backend,
 	fn precompiled_erc20_transfer_from(&self, contract_id: u8, from: H160, to: H160, value: U256) -> bool {
 		self.backend.precompiled_erc20_transfer_from(contract_id, from, to, value)
 	}
+
+	fn precompiled_erc20_emit_approve_event(&self, contract: H160, owner: H160, spender: H160, value: U256) {
+		self.backend.precompiled_erc20_emit_approve_event(contract, owner, spender, value)
+	}
+
+	fn precompiled_erc20_emit_transfer_event(&self, contract: H160, src: H160, dst: H160, value: U256) {
+		self.backend.precompiled_erc20_emit_transfer_event(contract, src, dst, value)
+	}
 }
 
 impl<'backend, 'config, B: Backend> StackState<'config> for MemoryStackState<'backend, 'config, B> {

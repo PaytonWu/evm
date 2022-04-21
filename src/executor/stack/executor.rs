@@ -194,6 +194,8 @@ pub trait ExtBackend {
 	fn precompiled_erc20_transfer(&self, contract_id: u8, to: H160, value: U256) -> bool;
 	fn precompiled_erc20_approve(&self, contract_id: u8, spender: H160, value: U256) -> bool;
 	fn precompiled_erc20_transfer_from(&self, contract_id: u8, from: H160, to: H160, value: U256) -> bool;
+	fn precompiled_erc20_emit_transfer_event(&self, contract: H160, src: H160, dst: H160, value: U256);
+	fn precompiled_erc20_emit_approve_event(&self, contract: H160, owner: H160, spender: H160, value: U256);
 }
 
 #[auto_impl::auto_impl(&mut, Box)]

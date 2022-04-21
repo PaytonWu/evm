@@ -251,4 +251,10 @@ impl<'vicinity> ExtBackend for MemoryBackend<'vicinity> {
 	fn precompiled_erc20_transfer_from(&self, _contract_id: u8, _from: H160, _to: H160, _value: U256) -> bool {
 		true
 	}
+
+	fn precompiled_erc20_emit_transfer_event(&self, _contract: H160, _src: H160, _dst: H160, _value: U256) {
+	}
+
+	fn precompiled_erc20_emit_approve_event(&self, _contract: H160, _owner: H160, _spender: H160, _value: U256) {
+	}
 }
