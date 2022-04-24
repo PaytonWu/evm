@@ -465,6 +465,10 @@ impl<'backend, 'config, B: Backend> Backend for MemoryStackState<'backend, 'conf
 }
 
 impl<'backend, 'config, B: ExtBackend> ExtBackend for MemoryStackState<'backend, 'config, B> {
+	fn precompiled_erc20_msg_sender(&self) -> H160 {
+		self.backend.precompiled_erc20_msg_sender()
+	}
+
 	fn precompiled_erc20_decimals(&self, contract_id: u8) -> u8 {
 		self.backend.precompiled_erc20_decimals(contract_id)
 	}
@@ -493,11 +497,11 @@ impl<'backend, 'config, B: ExtBackend> ExtBackend for MemoryStackState<'backend,
 		self.backend.precompiled_erc20_transfer_from(contract_id, from, to, value)
 	}
 
-	fn precompiled_erc20_emit_approve_event(&self, contract: H160, owner: H160, spender: H160, value: U256) {
+	fn precompiled_erc20_emit_approve_event(&self, contract: H160, owner: H160, spender: H160, value: U256) -> Vec<Log> {
 		self.backend.precompiled_erc20_emit_approve_event(contract, owner, spender, value)
 	}
 
-	fn precompiled_erc20_emit_transfer_event(&self, contract: H160, src: H160, dst: H160, value: U256) {
+	fn precompiled_erc20_emit_transfer_event(&self, contract: H160, src: H160, dst: H160, value: U256) -> Vec<Log> {
 		self.backend.precompiled_erc20_emit_transfer_event(contract, src, dst, value)
 	}
 }

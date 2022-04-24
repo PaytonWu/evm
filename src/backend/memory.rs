@@ -224,6 +224,10 @@ impl<'vicinity> ApplyBackend for MemoryBackend<'vicinity> {
 }
 
 impl<'vicinity> ExtBackend for MemoryBackend<'vicinity> {
+	fn precompiled_erc20_msg_sender(&self) -> H160 {
+		H160::zero()
+	}
+
 	fn precompiled_erc20_decimals(&self, _contract_id: u8) -> u8 {
 		18_u8
 	}
@@ -252,9 +256,11 @@ impl<'vicinity> ExtBackend for MemoryBackend<'vicinity> {
 		true
 	}
 
-	fn precompiled_erc20_emit_transfer_event(&self, _contract: H160, _src: H160, _dst: H160, _value: U256) {
+	fn precompiled_erc20_emit_transfer_event(&self, _contract: H160, _src: H160, _dst: H160, _value: U256) -> Vec<Log> {
+		vec![]
 	}
 
-	fn precompiled_erc20_emit_approve_event(&self, _contract: H160, _owner: H160, _spender: H160, _value: U256) {
+	fn precompiled_erc20_emit_approve_event(&self, _contract: H160, _owner: H160, _spender: H160, _value: U256) -> Vec<Log>{
+		vec![]
 	}
 }
